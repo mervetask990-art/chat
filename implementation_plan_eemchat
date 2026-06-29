@@ -1,0 +1,235 @@
+# ⚡ EEE Chat — Elektrik-Elektronik Mühendisliği AI Asistanı
+
+Gemini 2.5 Flash destekli, fotoğraf analizi yapabilen, geçmiş sohbetleri hatırlayan ve sınava hazırlık moduna sahip tam kapsamlı bir chat uygulaması.
+
+---
+
+## 🗺️ Proje Mimarisi
+
+```
+eee-chat/
+├── frontend/          ← Next.js 14 (App Router)
+└── backend/           ← Node.js + TypeScript + Express
+    ├── prisma/        ← ORM şemaları
+    └── src/           ← API katmanı
+```
+
+### Teknoloji Yığını
+
+| Katman | Teknoloji |
+|--------|-----------|
+| Frontend | Next.js 14 (App Router) + TypeScript |
+| Styling | Tailwind CSS + shadcn/ui |
+| Backend | Node.js + Express + TypeScript |
+| ORM | Prisma |
+| Veritabanı | PostgreSQL |
+| AI | Google Gemini 2.5 Flash (multimodal) |
+| Auth | NextAuth.js (JWT tabanlı) |
+| File Upload | Multer (backend) + React Dropzone (frontend) |
+| State Mgmt | Zustand veya React Context |
+
+---
+
+## 📦 Özellikler (Feature List)
+
+### Temel Özellikler
+- ✅ Kullanıcı kaydı & girişi (Auth)
+- ✅ Yeni sohbet başlatma
+- ✅ Geçmiş sohbetleri listeleme (sidebar)
+- ✅ Sohbet geçmişini AI'a iletme (context window)
+- ✅ Fotoğraf yükleme + Gemini ile analiz (devre şeması, denklem, bileşen)
+- ✅ Markdown + LaTeX formül render (math.js / KaTeX)
+- ✅ Sınav modu: Çoktan seçmeli soru üretme
+- ✅ Geçmiş sayfası: Tüm konuşmaları görüntüleme/silme
+
+### EEE'ye Özel Özellikler
+- ⚡ Devre şeması okuma (fotoğraftan)
+- 📐 LaTeX formül render (Kirchhoff, Maxwell, Fourier vb.)
+- 📚 Konu bazlı sınav soruları (Devre Analizi, Sinyal-Sistemler, EMK...)
+- 🔍 Bileşen tanıma (transistör, kondansatör, direnç vb.)
+
+---
+
+## 🗄️ Veritabanı Şeması (Prisma)
+
+```prisma
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  chats     Chat[]
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  title     String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  imageUrl  String?  // Fotoğraf yüklenirse S3/local path
+  createdAt DateTime @default(now())
+}
+```
+
+---
+
+## 🔌 API Endpoint'leri
+
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| POST | `/api/auth/register` | Kullanıcı kaydı |
+| POST | `/api/auth/login` | JWT token al |
+| GET | `/api/chats` | Kullanıcının tüm sohbetleri |
+| POST | `/api/chats` | Yeni sohbet oluştur |
+| GET | `/api/chats/:id` | Sohbet detayı + mesajlar |
+| DELETE | `/api/chats/:id` | Sohbet sil |
+| POST | `/api/chats/:id/messages` | Mesaj gönder (+ fotoğraf) |
+| POST | `/api/chats/:id/exam` | Sınav sorusu üret |
+
+---
+
+## 🤖 Gemini Entegrasyonu
+
+```typescript
+// Multimodal (metin + fotoğraf) örneği
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+const systemPrompt = `Sen elektrik ve elektronik mühendisliği konusunda 
+uzman bir akademik asistansın. Türkçe yanıt ver. Matematiksel ifadeleri 
+LaTeX formatında yaz. Devre şemalarını, formülleri ve elektronik 
+bileşenleri detaylıca analiz edebilirsin.`;
+
+// Geçmiş mesajları context olarak ilet
+const history = messages.map(msg => ({
+  role: msg.role,
+  parts: [{ text: msg.content }]
+}));
+```
+
+---
+
+## 📱 Sayfa Yapısı (Next.js)
+
+```
+app/
+├── (auth)/
+│   ├── login/page.tsx
+│   └── register/page.tsx
+├── (main)/
+│   ├── chat/
+│   │   ├── page.tsx          ← Yeni sohbet
+│   │   └── [id]/page.tsx     ← Mevcut sohbet
+│   └── history/
+│       └── page.tsx          ← Geçmiş sohvetler
+├── layout.tsx
+└── page.tsx                  ← Landing / Redirect
+```
+
+---
+
+## ⏱️ Zaman Tahmini
+
+| Aşama | İçerik | Süre |
+|-------|--------|------|
+| **Aşama 1** | Proje kurulumu, DB şeması, Auth | 1-2 gün |
+| **Aşama 2** | Backend API (Chat CRUD + Gemini) | 2-3 gün |
+| **Aşama 3** | Frontend temel chat arayüzü | 2-3 gün |
+| **Aşama 4** | Fotoğraf yükleme + analiz | 1-2 gün |
+| **Aşama 5** | Geçmiş sayfası + Sınav modu | 1-2 gün |
+| **Aşama 6** | Polish, LaTeX render, UI iyileştirme | 1-2 gün |
+| **TOPLAM** | | **~2 hafta** |
+
+> Deneyim düzeyine göre 1 hafta (deneyimli) ile 3 hafta (başlangıç) arasında değişir.
+
+---
+
+## 🚀 Başlangıç Adımları (Sıralı)
+
+### Adım 1 — Ortam Kurulumu
+```bash
+# PostgreSQL kur (lokal veya Docker)
+docker run --name eee-db -e POSTGRES_PASSWORD=secret -p 5432:5432 -d postgres
+
+# Gemini API key al → https://aistudio.google.com/
+```
+
+### Adım 2 — Backend Kurulumu
+```bash
+mkdir eee-chat && cd eee-chat
+mkdir backend && cd backend
+npm init -y
+npm install express prisma @prisma/client typescript ts-node
+npm install @google/generative-ai multer jsonwebtoken bcrypt
+npx prisma init
+```
+
+### Adım 3 — Frontend Kurulumu
+```bash
+cd ..
+npx create-next-app@latest frontend --typescript --tailwind --app
+cd frontend
+npm install axios zustand @radix-ui/react-dialog lucide-react
+npm install react-markdown remark-math rehype-katex katex
+```
+
+### Adım 4 — .env Dosyaları
+```env
+# backend/.env
+DATABASE_URL="postgresql://postgres:secret@localhost:5432/eee_chat"
+GEMINI_API_KEY="your-gemini-api-key"
+JWT_SECRET="your-jwt-secret"
+PORT=3001
+
+# frontend/.env.local
+NEXT_PUBLIC_API_URL="http://localhost:3001"
+```
+
+---
+
+## ❓ Açık Sorular (Karar Gerekiyor)
+
+> [!IMPORTANT]
+> **Kullanıcı Sistemi**: Auth (giriş/kayıt) istiyor musun, yoksa giriş olmadan direkt kullanabilsin mi?
+
+> [!IMPORTANT]
+> **Fotoğraf Depolama**: Fotoğraflar nerede saklanacak?
+> - **Local disk** (geliştirme için kolay, production'da sorunlu)
+> - **AWS S3 / Cloudflare R2** (production için ideal, ücretsiz tier var)
+> - **Base64 DB'ye** (küçük projeler için, ölçeklenmiyor)
+
+> [!NOTE]
+> **Deploy**: Projeyi nereye deploy etmek istiyorsun?
+> - Vercel (frontend) + Railway/Render (backend + DB) → Ücretsiz
+> - VPS (DigitalOcean, AWS EC2)
+> - Sadece lokal kullanım
+
+> [!NOTE]
+> **Sınav Modu Detayı**: Sınav modunda ne istiyorsun?
+> - Konu seçip otomatik soru üretimi (ör: "Devre Analizi'nden 10 soru çıkar")
+> - Yanlış cevaplarda açıklama
+> - Skor takibi ve istatistik
+
+---
+
+## ✅ Şu An Yapabilirim
+
+Onay verirsen **hemen başlayabilirim**:
+
+1. **Backend + Frontend proje iskeletini** oluşturmak (`c:\Users\User\Desktop\chat` klasörüne)
+2. **Prisma şemasını** ve migration'ları yazmak
+3. **Gemini API entegrasyonunu** kodlamak
+4. **Temel chat arayüzünü** Next.js ile oluşturmak
+
+Yukarıdaki açık soruları yanıtlarsan daha hızlı ilerleyebiliriz!

@@ -1,0 +1,73 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chats     Chat[]
+  examSessions ExamSession[]
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  title     String    @default("Yeni Sohbet")
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+
+  @@index([userId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  imageUrl  String?  // Local file path for uploaded images
+  imageName String?  // Original filename
+  createdAt DateTime @default(now())
+
+  @@index([chatId])
+}
+
+model ExamSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic        String   // "Devre Analizi", "Sinyal-Sistemler" etc.
+  totalQuestions Int    @default(0)
+  correctAnswers Int    @default(0)
+  score        Float    @default(0)
+  completed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  questions    ExamQuestion[]
+
+  @@index([userId])
+}
+
+model ExamQuestion {
+  id            String      @id @default(cuid())
+  sessionId     String
+  session       ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question      String      @db.Text
+  options       Json        // ["A) ...", "B) ...", "C) ...", "D) ..."]
+  correctAnswer String      // "A", "B", "C" or "D"
+  userAnswer    String?
+  explanation   String?     @db.Text
+  isCorrect     Boolean?
+  createdAt     DateTime    @default(now())
+}
